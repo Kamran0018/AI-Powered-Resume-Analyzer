@@ -1,0 +1,526 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Dashboard - AI Resume Analyzer{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    {% if user.is_authenticated %}
+    <!-- Welcome Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card bg-gradient-primary text-white">
+                <div class="card-body">
+                    <h2 class="card-title">
+                        <i class="fas fa-chart-line"></i> Welcome back, {{ user.first_name|default:user.username }}!
+                    </h2>
+                    <p class="card-text">Track your resume performance, get AI insights, and improve your chances of landing your dream job.</p>
+                    <a href="{% url 'upload_resume' %}" class="btn btn-light btn-lg">
+                        <i class="fas fa-upload"></i> Upload New Resume
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card stat-card h-100">
+                <div class="card-body text-center">
+                    <i class="fas fa-file-alt fa-3x mb-3"></i>
+                    <h5 class="card-title">Total Resumes</h5>
+                    <h2 class="stat-number">{{ total_resumes }}</h2>
+                    <p class="card-text">Resumes analyzed</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card stat-card h-100" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                <div class="card-body text-center">
+                    <i class="fas fa-chart-line fa-3x mb-3"></i>
+                    <h5 class="card-title">Average ATS Score</h5>
+                    <h2 class="stat-number">{{ avg_ats_score }}%</h2>
+                    <p class="card-text">Overall performance</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card stat-card h-100" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+                <div class="card-body text-center">
+                    <i class="fas fa-briefcase fa-3x mb-3"></i>
+                    <h5 class="card-title">Job Matches</h5>
+                    <h2 class="stat-number">{{ total_job_matches }}</h2>
+                    <p class="card-text">Comparisons made</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card stat-card h-100" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);">
+                <div class="card-body text-center">
+                    <i class="fas fa-trophy fa-3x mb-3"></i>
+                    <h5 class="card-title">Best Score</h5>
+                    <h2 class="stat-number">
+                        {% if ats_scores %}
+                            {% with max_score=0 %}
+                                {% for score in ats_scores %}
+                                    {% if score > max_score %}
+                                        {% with max_score=score %}{% endwith %}
+                                    {% endif %}
+                                {% endfor %}
+                            {% endwith %}
+                        {% else %}
+                            0
+                        {% endif %}%
+                    </h2>
+                    <p class="card-text">Highest ATS score</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="row mb-4">
+        <div class="col-lg-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-chart-bar"></i> ATS Score Trend
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="atsScoreChart" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-chart-pie"></i> Top Skills
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="skillsChart" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Resumes Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-history"></i> Recent Resumes
+                    </h5>
+                    <a href="{% url 'resume_history' %}" class="btn btn-sm btn-primary">View All</a>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Title</th>
+                                    <th>Uploaded</th>
+                                    <th>ATS Score</th>
+                                    <th>Skills</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for resume in recent_resumes %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ resume.title }}</strong>
+                                        <br>
+                                        <small class="text-muted">{{ resume.full_name|default:"Name not found" }}</small>
+                                    </td>
+                                    <td>{{ resume.uploaded_at|date:"M d, Y" }}</td>
+                                    <td>
+                                        {% if resume.ats_score %}
+                                            <div class="d-flex align-items-center">
+                                                <div class="progress flex-grow-1 me-2" style="height: 8px;">
+                                                    <div class="progress-bar bg-{% if resume.ats_score.overall_score >= 70 %}success{% elif resume.ats_score.overall_score >= 50 %}warning{% else %}danger{% endif %}" 
+                                                         style="width: {{ resume.ats_score.overall_score }}%"></div>
+                                                </div>
+                                                <span class="fw-bold">{{ resume.ats_score.overall_score }}%</span>
+                                            </div>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Pending</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if resume.skills %}
+                                            {% for skill in resume.skills|slice:":3" %}
+                                                <span class="skill-tag">{{ skill }}</span>
+                                            {% endfor %}
+                                            {% if resume.skills|length > 3 %}
+                                                <span class="skill-tag">+{{ resume.skills|length|add:"-3" }}</span>
+                                            {% endif %}
+                                        {% else %}
+                                            <span class="text-muted">No skills extracted</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <a href="{% url 'result' resume.id %}" class="btn btn-sm btn-info">
+                                            <i class="fas fa-eye"></i> View
+                                        </a>
+                                        <a href="{% url 'match_job' resume.id %}" class="btn btn-sm btn-success">
+                                            <i class="fas fa-search"></i> Match Job
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="5" class="text-center py-4">
+                                        <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
+                                        <p>No resumes uploaded yet.</p>
+                                        <a href="{% url 'upload_resume' %}" class="btn btn-primary">Upload Your First Resume</a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recommendations & Insights -->
+    <div class="row">
+        <div class="col-lg-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-lightbulb"></i> AI Insights
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if recent_resumes and recent_resumes.0.recommendation %}
+                        <div class="insight-card mb-3">
+                            <h6><i class="fas fa-graduation-cap text-primary"></i> Suggested Certifications</h6>
+                            <ul class="list-unstyled">
+                                {% for cert in recent_resumes.0.recommendation.suggested_certifications|slice:":3" %}
+                                    <li><i class="fas fa-certificate text-success"></i> {{ cert }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        <div class="insight-card mb-3">
+                            <h6><i class="fas fa-code text-primary"></i> Recommended Projects</h6>
+                            <ul class="list-unstyled">
+                                {% for project in recent_resumes.0.recommendation.suggested_projects|slice:":3" %}
+                                    <li><i class="fas fa-project-diagram text-info"></i> {{ project }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        <div class="insight-card">
+                            <h6><i class="fas fa-chart-line text-primary"></i> Career Improvements</h6>
+                            <ul class="list-unstyled">
+                                {% for improvement in recent_resumes.0.recommendation.career_improvements|slice:":3" %}
+                                    <li><i class="fas fa-arrow-right text-warning"></i> {{ improvement }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-robot fa-3x text-muted mb-3"></i>
+                            <p>Upload a resume to get AI-powered insights!</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-tasks"></i> Quick Actions
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <a href="{% url 'upload_resume' %}" class="text-decoration-none">
+                                <div class="quick-action-card text-center p-3">
+                                    <i class="fas fa-upload fa-2x text-primary mb-2"></i>
+                                    <h6>Upload Resume</h6>
+                                    <small class="text-muted">Analyze new resume</small>
+                                </div>
+                            </a>
+                        </div>
+                        <div class="col-6">
+                            <a href="{% url 'resume_history' %}" class="text-decoration-none">
+                                <div class="quick-action-card text-center p-3">
+                                    <i class="fas fa-history fa-2x text-info mb-2"></i>
+                                    <h6>View History</h6>
+                                    <small class="text-muted">See all analyses</small>
+                                </div>
+                            </a>
+                        </div>
+                        <div class="col-6">
+                            <a href="{% url 'profile' %}" class="text-decoration-none">
+                                <div class="quick-action-card text-center p-3">
+                                    <i class="fas fa-user-edit fa-2x text-success mb-2"></i>
+                                    <h6>Update Profile</h6>
+                                    <small class="text-muted">Manage account</small>
+                                </div>
+                            </a>
+                        </div>
+                        <div class="col-6">
+                            <a href="#" data-bs-toggle="modal" data-bs-target="#tipsModal" class="text-decoration-none">
+                                <div class="quick-action-card text-center p-3">
+                                    <i class="fas fa-lightbulb fa-2x text-warning mb-2"></i>
+                                    <h6>Resume Tips</h6>
+                                    <small class="text-muted">Get expert advice</small>
+                                </div>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="row">
+        <div class="col-12 text-center py-5">
+            <div class="card">
+                <div class="card-body">
+                    <i class="fas fa-lock fa-4x text-muted mb-3"></i>
+                    <h3>Please Login to Access Dashboard</h3>
+                    <p>You need to be logged in to view your dashboard.</p>
+                    <a href="{% url 'login' %}" class="btn btn-primary">Login</a>
+                    <a href="{% url 'register' %}" class="btn btn-secondary">Register</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Resume Tips Modal -->
+<div class="modal fade" id="tipsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-lightbulb text-warning"></i> Expert Resume Tips
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6><i class="fas fa-check-circle text-success"></i> Do's</h6>
+                        <ul>
+                            <li>Use standard section headings</li>
+                            <li>Include keywords from job descriptions</li>
+                            <li>Quantify your achievements with numbers</li>
+                            <li>Keep resume to 1-2 pages</li>
+                            <li>Use bullet points for readability</li>
+                            <li>Include a professional summary</li>
+                            <li>List technical skills prominently</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6><i class="fas fa-times-circle text-danger"></i> Don'ts</h6>
+                        <ul>
+                            <li>Avoid using tables or columns</li>
+                            <li>Don't use fancy fonts or graphics</li>
+                            <li>Avoid generic phrases like "hardworking"</li>
+                            <li>Don't include irrelevant personal info</li>
+                            <li>Avoid spelling and grammar errors</li>
+                            <li>Don't use PDF with images only</li>
+                            <li>Avoid overused buzzwords</li>
+                        </ul>
+                    </div>
+                </div>
+                <hr>
+                <h6><i class="fas fa-chart-line"></i> ATS Optimization Checklist</h6>
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr><th>Checkpoint</th><th>Status</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>File format (PDF/DOCX)</td><td><span class="badge bg-success">Required</span></td></tr>
+                            <tr><td>Contact information visible</td><td><span class="badge bg-success">Required</span></td></tr>
+                            <tr><td>Skills section present</td><td><span class="badge bg-success">Required</span></td></tr>
+                            <tr><td>Work experience with dates</td><td><span class="badge bg-warning">Recommended</span></td></tr>
+                            <tr><td>Education section</td><td><span class="badge bg-warning">Recommended</span></td></tr>
+                            <tr><td>Certifications & projects</td><td><span class="badge bg-info">Bonus</span></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <a href="{% url 'upload_resume' %}" class="btn btn-primary">Upload Resume Now</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .bg-gradient-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    
+    .stat-card {
+        transition: transform 0.3s, box-shadow 0.3s;
+        cursor: pointer;
+        border: none;
+        border-radius: 15px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+    }
+    
+    .skill-tag {
+        display: inline-block;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        margin: 2px;
+    }
+    
+    .insight-card {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 15px;
+        margin-bottom: 15px;
+    }
+    
+    body.dark-mode .insight-card {
+        background: #2d3748;
+    }
+    
+    .quick-action-card {
+        background: #f8f9fa;
+        border-radius: 10px;
+        transition: all 0.3s;
+        cursor: pointer;
+    }
+    
+    .quick-action-card:hover {
+        background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
+        transform: translateY(-3px);
+    }
+    
+    body.dark-mode .quick-action-card {
+        background: #2d3748;
+    }
+</style>
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // ATS Score Trend Chart
+    {% if ats_scores and resume_titles %}
+    const atsCtx = document.getElementById('atsScoreChart').getContext('2d');
+    new Chart(atsCtx, {
+        type: 'line',
+        data: {
+            labels: {{ resume_titles|safe }},
+            datasets: [{
+                label: 'ATS Score (%)',
+                data: {{ ats_scores|safe }},
+                borderColor: 'rgb(102, 126, 234)',
+                backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                borderWidth: 3,
+                fill: true,
+                tension: 0.4,
+                pointBackgroundColor: 'rgb(102, 126, 234)',
+                pointBorderColor: '#fff',
+                pointBorderWidth: 2,
+                pointRadius: 5,
+                pointHoverRadius: 7
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    position: 'top',
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return `ATS Score: ${context.raw}%`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100,
+                    ticks: {
+                        callback: function(value) {
+                            return value + '%';
+                        }
+                    }
+                }
+            }
+        }
+    });
+    {% endif %}
+
+    // Skills Chart (Pie/Donut)
+    {% if top_skills %}
+    const skillsCtx = document.getElementById('skillsChart').getContext('2d');
+    const skillsData = {{ top_skills|safe }};
+    const skillsLabels = skillsData.map(item => item[0]);
+    const skillsCounts = skillsData.map(item => item[1]);
+    
+    new Chart(skillsCtx, {
+        type: 'doughnut',
+        data: {
+            labels: skillsLabels,
+            datasets: [{
+                data: skillsCounts,
+                backgroundColor: [
+                    'rgba(102, 126, 234, 0.8)',
+                    'rgba(16, 185, 129, 0.8)',
+                    'rgba(245, 158, 11, 0.8)',
+                    'rgba(239, 68, 68, 0.8)',
+                    'rgba(139, 92, 246, 0.8)',
+                    'rgba(236, 72, 153, 0.8)',
+                    'rgba(6, 182, 212, 0.8)',
+                    'rgba(34, 197, 94, 0.8)',
+                    'rgba(168, 85, 247, 0.8)',
+                    'rgba(249, 115, 22, 0.8)'
+                ],
+                borderWidth: 2,
+                borderColor: '#fff',
+                hoverOffset: 10
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    position: 'right',
+                    labels: {
+                        font: {
+                            size: 11
+                        }
+                    }
+                }
+            }
+        }
+    });
+    {% endif %}
+</script>
+{% endblock %}
+{% endblock %}

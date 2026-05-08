@@ -1,0 +1,126 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Home{% endblock %}
+
+{% block content %}
+<div class="hero-section">
+    <div class="container">
+        <div class="row align-items-center min-vh-75">
+            <div class="col-lg-6">
+                <h1 class="display-4 fw-bold mb-4">
+                    <span class="gradient-text">AI-Powered Resume Analyzer</span>
+                </h1>
+                <p class="lead mb-4">
+                    Get instant ATS score, AI recommendations, and voice feedback in English & Hindi. 
+                    Optimize your resume for your dream job!
+                </p>
+                <div class="d-grid gap-3 d-sm-flex">
+                    {% if user.is_authenticated %}
+                        <a href="{% url 'upload_resume' %}" class="btn btn-primary btn-lg px-4">
+                            <i class="fas fa-upload"></i> Upload Resume
+                        </a>
+                        <a href="{% url 'dashboard' %}" class="btn btn-outline-primary btn-lg px-4">
+                            <i class="fas fa-chart-line"></i> Go to Dashboard
+                        </a>
+                    {% else %}
+                        <a href="{% url 'register' %}" class="btn btn-primary btn-lg px-4">
+                            <i class="fas fa-user-plus"></i> Get Started Free
+                        </a>
+                        <a href="{% url 'login' %}" class="btn btn-outline-primary btn-lg px-4">
+                            <i class="fas fa-sign-in-alt"></i> Login
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="floating-card">
+                    <img src="{% static 'assets/hero-illustration.svg' %}" alt="AI Resume Analyzer" class="img-fluid">
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="features-section py-5">
+    <div class="container">
+        <h2 class="text-center mb-5">Advanced Features</h2>
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="feature-card">
+                    <i class="fas fa-file-alt fa-3x text-primary mb-3"></i>
+                    <h4>ATS Score Analysis</h4>
+                    <p>Get detailed ATS compatibility score with strengths and weaknesses</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="feature-card">
+                    <i class="fas fa-robot fa-3x text-primary mb-3"></i>
+                    <h4>AI Recommendations</h4>
+                    <p>Personalized suggestions using Google Gemini AI</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="feature-card">
+                    <i class="fas fa-language fa-3x text-primary mb-3"></i>
+                    <h4>Voice Feedback</h4>
+                    <p>Listen to recommendations in English & Hindi</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="feature-card">
+                    <i class="fas fa-chart-line fa-3x text-primary mb-3"></i>
+                    <h4>Job Matching</h4>
+                    <p>Compare your resume with any job description</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="feature-card">
+                    <i class="fas fa-brain fa-3x text-primary mb-3"></i>
+                    <h4>Skill Gap Analysis</h4>
+                    <p>Identify missing skills and get learning recommendations</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="feature-card">
+                    <i class="fas fa-download fa-3x text-primary mb-3"></i>
+                    <h4>Download Reports</h4>
+                    <p>Export detailed analysis as PDF</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .hero-section {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 80px 0;
+    }
+    
+    .gradient-text {
+        background: linear-gradient(135deg, #fff 0%, #e0e0e0 100%);
+        background-clip: text;
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+    
+    .feature-card {
+        background: white;
+        border-radius: 15px;
+        padding: 30px;
+        text-align: center;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        transition: transform 0.3s;
+    }
+    
+    .feature-card:hover {
+        transform: translateY(-5px);
+    }
+    
+    .min-vh-75 {
+        min-height: 75vh;
+    }
+</style>
+{% endblock %}

@@ -1,0 +1,22 @@
+body.dark-mode {
+    background-color: #1a1a2e;
+    color: #eee;
+}
+
+body.dark-mode .card {
+    background-color: #16213e;
+    color: #eee;
+}
+
+body.dark-mode .feature-card {
+    background-color: #16213e;
+    color: #eee;
+}
+
+body.dark-mode .navbar {
+    background-color: #0f3460 !important;
+}
+
+body.dark-mode .audio-player {
+    background-color: #0f3460;
+}
